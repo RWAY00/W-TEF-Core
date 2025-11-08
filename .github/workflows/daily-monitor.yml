@@ -27,15 +27,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas numpy scikit-learn
 
-      - name: Run stability verification (create small python script and run)
+           - name: Run stability verification (create small python script and run)
         shell: bash
         run: |
-          if [ -f WTEF_Persistent_Cognitive_Archive.csv ]; then
-            echo "Archive found — creating log with monitor.py"
-          else
-            echo "Archive missing — creating test log with monitor.py"
-          fi
-
+          echo "Running stability verification..."
+          # create a small python file and execute it (avoids heredoc YAML indentation issues)
           cat > monitor.py <<'PY'
 import datetime, json, os
 

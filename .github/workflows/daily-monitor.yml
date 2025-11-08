@@ -1,12 +1,10 @@
 name: WTEF Daily Stability Monitor
 
-# Allow manual & scheduled runs
 on:
   schedule:
     - cron: "0 3 * * *"   # daily at 03:00 UTC (08:30 IST)
   workflow_dispatch:
 
-# Important: allow write so workflow can push changes
 permissions:
   contents: write
 
@@ -17,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: true   # << important for writing back
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,24 +28,26 @@ jobs:
           pip install pandas numpy scikit-learn
 
       - name: Run stability verification
+        shell: bash
         run: |
-          # if you already have a monitor script, run it
-          # otherwise create a quick sample log file for test
+          # Create a small test log using embedded python. This block uses a heredoc.
           if [ -f WTEF_Persistent_Cognitive_Archive.csv ]; then
             python - <<'PY'
-    import datetime, json
-    row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test":"ok"}
-    open('WTEF_Daily_Log.json','w').write(json.dumps(row))
-    print('Created WTEF_Daily_Log.json')
-    PY
+import datetime, json
+row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test":"ok"}
+with open('WTEF_Daily_Log.json','w') as f:
+    f.write(json.dumps(row))
+print('Created WTEF_Daily_Log.json')
+PY
           else
             echo "Archive missing; creating test log file"
             python - <<'PY'
-    import datetime, json
-    row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note":"archive-missing-test"}
-    open('WTEF_Daily_Log.json','w').write(json.dumps(row))
-    print('Created WTEF_Daily_Log.json (test)')
-    PY
+import datetime, json
+row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note":"archive-missing-test"}
+with open('WTEF_Daily_Log.json','w') as f:
+    f.write(json.dumps(row))
+print('Created WTEF_Daily_Log.json (test)')
+PY
           fi
 
       - name: Commit updated log

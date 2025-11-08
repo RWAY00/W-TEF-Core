@@ -1,0 +1,16 @@
+pair_id,Intuitive_Response_Index,mean_context_sim,harmony_factor,_source_file,Cognitive_Continuum_Stability,Reflection_Stability_Score,Temporal_Drift_Index,Adaptive_Equilibrium,REF_mean,REF_std,TSMI_mean,TSMI_std,EIG_mean,EIG_std,Self_Awareness_Gradient,runs,Meta_Coherence_Index,Self_Referential_Consistency,Conscious_Integration_Factor
+pair_01,0.874,0.825,0.989,phaseXIII_intuition_probe.csv,,,,,,,,,,,,,,,
+pair_02,0.874,0.825,0.989,phaseXIII_intuition_probe.csv,,,,,,,,,,,,,,,
+pair_03,0.874,0.825,0.989,phaseXIII_intuition_probe.csv,,,,,,,,,,,,,,,
+pair_01,,,,phaseXII_cognitive_continuum.csv,0.815,,,,,,,,,,,,,,
+pair_02,,,,phaseXII_cognitive_continuum.csv,0.815,,,,,,,,,,,,,,
+pair_03,,,,phaseXII_cognitive_continuum.csv,0.815,,,,,,,,,,,,,,
+pair_01,,,,phaseXIV_reflection_stability.csv,,0.75,0.025,0.862,,,,,,,,,,,
+pair_02,,,,phaseXIV_reflection_stability.csv,,0.75,0.025,0.862,,,,,,,,,,,
+pair_03,,,,phaseXIV_reflection_stability.csv,,0.75,0.025,0.862,,,,,,,,,,,
+pair_01,,,,phaseXVI_self_awareness_gradient.csv,,,,,0.931,0.009,0.94,0.025,0.923,0.018,0.931,5.0,,,
+pair_02,,,,phaseXVI_self_awareness_gradient.csv,,,,,0.924,0.02,0.942,0.03,0.922,0.018,0.929,5.0,,,
+pair_03,,,,phaseXVI_self_awareness_gradient.csv,,,,,0.916,0.011,0.938,0.019,0.925,0.018,0.926,5.0,,,
+pair_01,,,,phaseXV_meta_consciousness_alignment.csv,,,,,,,,,,,,,0.775,0.808,0.792
+pair_02,,,,phaseXV_meta_consciousness_alignment.csv,,,,,,,,,,,,,0.775,0.808,0.792
+pair_03,,,,phaseXV_meta_consciousness_alignment.csv,,,,,,,,,,,,,0.775,0.808,0.792

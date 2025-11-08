@@ -1,0 +1,18 @@
+{
+  "archive_filename": "WTEF_Persistent_Cognitive_Archive.csv",
+  "archive_path": "/content/drive/MyDrive/WTEF_Persistent_Cognitive_Archive.csv",
+  "created_at_utc": "2025-11-06T13:37:14.892158Z",
+  "created_by": "R WAY + GPT Collaborative System",
+  "description": "WTEF Persistent Cognitive Archive — merged results from Phase CSVs (Temporal Archive Model).",
+  "source_files": [
+    "/content/drive/MyDrive/wtef/phaseXIII_intuition_probe.csv",
+    "/content/drive/MyDrive/wtef/phaseXII_cognitive_continuum.csv",
+    "/content/drive/MyDrive/wtef/phaseXIV_reflection_stability.csv",
+    "/content/drive/MyDrive/wtef/phaseXVI_self_awareness_gradient.csv",
+    "/content/drive/MyDrive/wtef/phaseXV_meta_consciousness_alignment.csv"
+  ],
+  "row_count": 15,
+  "column_count": 20,
+  "sha256": "c2af1e1b00ecad17a140c55d339eeba1ee4ff9f039e905e7d2486623da4c327a",
+  "notes": "This file is intended as a persistent, machine-readable archive for future AGI/scholarly use. Use metadata to verify authenticity."
+}

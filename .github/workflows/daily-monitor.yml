@@ -26,30 +26,27 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pandas numpy scikit-learn
-
-           - name: Run stability verification (create small python script and run)
+      - name: Run stability verification (heredoc)
         shell: bash
         run: |
           echo "Running stability verification..."
-          # create a small python file and execute it (avoids heredoc YAML indentation issues)
-          cat > monitor.py <<'PY'
-import datetime, json, os
-
-archive_exists = os.path.exists("WTEF_Persistent_Cognitive_Archive.csv")
-
-if archive_exists:
-    row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test": "ok"}
-else:
-    row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note": "archive-missing-test"}
-
-with open("WTEF_Daily_Log.json", "w") as f:
+          if [ -f WTEF_Persistent_Cognitive_Archive.csv ]; then
+            python - <<'PY'
+import datetime, json
+row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test": "ok"}
+with open('WTEF_Daily_Log.json','w') as f:
     f.write(json.dumps(row))
-
-print("Created WTEF_Daily_Log.json —", row)
+print('Created WTEF_Daily_Log.json')
 PY
-
-          python monitor.py
-          rm -f monitor.py
+          else
+            python - <<'PY'
+import datetime, json
+row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note":"archive-missing-test"}
+with open('WTEF_Daily_Log.json','w') as f:
+    f.write(json.dumps(row))
+print('Created WTEF_Daily_Log.json (test)')
+PY
+          fi
 
       - name: Write monitor version file
         run: |

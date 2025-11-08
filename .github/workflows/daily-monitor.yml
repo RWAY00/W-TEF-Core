@@ -27,35 +27,38 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas numpy scikit-learn
 
-      - name: Run stability verification
+      - name: Run stability verification (create small python script and run)
         shell: bash
         run: |
-          echo "Running stability verification..."
           if [ -f WTEF_Persistent_Cognitive_Archive.csv ]; then
-            echo "Archive found — generating log."
-            python - <<'PY'
-import datetime, json
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test": "ok"}
-with open('WTEF_Daily_Log.json', 'w') as f:
-    f.write(json.dumps(row))
-print('Created WTEF_Daily_Log.json')
-PY
+            echo "Archive found — creating log with monitor.py"
           else
-            echo "Archive missing; creating test log file"
-            python - <<'PY'
-import datetime, json
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note": "archive-missing-test"}
-with open('WTEF_Daily_Log.json', 'w') as f:
-    f.write(json.dumps(row))
-print('Created WTEF_Daily_Log.json (test)')
-PY
+            echo "Archive missing — creating test log with monitor.py"
           fi
+
+          cat > monitor.py <<'PY'
+import datetime, json, os
+
+archive_exists = os.path.exists("WTEF_Persistent_Cognitive_Archive.csv")
+
+if archive_exists:
+    row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test": "ok"}
+else:
+    row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note": "archive-missing-test"}
+
+with open("WTEF_Daily_Log.json", "w") as f:
+    f.write(json.dumps(row))
+
+print("Created WTEF_Daily_Log.json —", row)
+PY
+
+          python monitor.py
+          rm -f monitor.py
 
       - name: Write monitor version file
         run: |
           echo "monitor_version=$(date -u +%Y%m%dT%H%M%SZ)" > WTEF_MONITOR_VERSION.txt
           cat WTEF_MONITOR_VERSION.txt
-          echo "Version file created ✅"
 
       - name: Commit updated log and version
         run: |

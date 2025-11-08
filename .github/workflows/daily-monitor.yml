@@ -34,22 +34,20 @@ jobs:
           # if you already have a monitor script, run it
           # otherwise create a quick sample log file for test
           if [ -f WTEF_Persistent_Cognitive_Archive.csv ]; then
-            python -c "print('archive exists: ok')"
-            # Replace the following line with your real script e.g. python monitor_run.py
             python - <<'PY'
-import datetime, json
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test":"ok"}
-open('WTEF_Daily_Log.json','w').write(json.dumps(row))
-print('Created WTEF_Daily_Log.json')
-PY
+    import datetime, json
+    row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test":"ok"}
+    open('WTEF_Daily_Log.json','w').write(json.dumps(row))
+    print('Created WTEF_Daily_Log.json')
+    PY
           else
             echo "Archive missing; creating test log file"
             python - <<'PY'
-import datetime, json
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note":"archive-missing-test"}
-open('WTEF_Daily_Log.json','w').write(json.dumps(row))
-print('Created WTEF_Daily_Log.json (test)')
-PY
+    import datetime, json
+    row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note":"archive-missing-test"}
+    open('WTEF_Daily_Log.json','w').write(json.dumps(row))
+    print('Created WTEF_Daily_Log.json (test)')
+    PY
           fi
 
       - name: Commit updated log

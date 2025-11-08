@@ -1,0 +1,52 @@
+name: WTEF Daily Stability Monitor
+on:
+  schedule:
+    - cron: "0 3 * * *"   # हर दिन सुबह 3 AM UTC (8:30 AM India)
+  workflow_dispatch:
+
+jobs:
+  stability-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas matplotlib numpy
+
+      - name: Run stability verification
+        run: |
+          python3 - <<'PYCODE'
+          import pandas as pd, hashlib, datetime, json, os
+          f = 'WTEF_Persistent_Cognitive_Archive.csv'
+          df = pd.read_csv(f)
+          sha = hashlib.sha256(open(f,'rb').read()).hexdigest()
+          metrics = {
+              "timestamp": datetime.datetime.utcnow().isoformat(),
+              "rows": len(df),
+              "columns": list(df.columns),
+              "sha256": sha
+          }
+          logf = 'WTEF_Daily_Log.json'
+          logs = []
+          if os.path.exists(logf):
+              logs = json.load(open(logf))
+          logs.append(metrics)
+          json.dump(logs, open(logf,'w'), indent=2)
+          print("Daily log appended:", metrics)
+          PYCODE
+
+      - name: Commit updated log
+        run: |
+          git config --global user.name "RWAY-AutoMonitor"
+          git config --global user.email "auto@wtef.system"
+          git add WTEF_Daily_Log.json
+          git commit -m "Auto update: Daily Stability Log" || echo "No changes"
+          git push

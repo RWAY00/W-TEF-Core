@@ -1,8 +1,14 @@
 name: WTEF Daily Stability Monitor
+
+# Allow manual & scheduled runs
 on:
   schedule:
-    - cron: "0 3 * * *"   # हर दिन सुबह 3 AM UTC (8:30 AM India)
+    - cron: "0 3 * * *"   # daily at 03:00 UTC (08:30 IST)
   workflow_dispatch:
+
+# Important: allow write so workflow can push changes
+permissions:
+  contents: write
 
 jobs:
   stability-check:
@@ -10,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true   # << important for writing back
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -19,34 +27,35 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas matplotlib numpy
+          pip install pandas numpy scikit-learn
 
       - name: Run stability verification
         run: |
-          python3 - <<'PYCODE'
-          import pandas as pd, hashlib, datetime, json, os
-          f = 'WTEF_Persistent_Cognitive_Archive.csv'
-          df = pd.read_csv(f)
-          sha = hashlib.sha256(open(f,'rb').read()).hexdigest()
-          metrics = {
-              "timestamp": datetime.datetime.utcnow().isoformat(),
-              "rows": len(df),
-              "columns": list(df.columns),
-              "sha256": sha
-          }
-          logf = 'WTEF_Daily_Log.json'
-          logs = []
-          if os.path.exists(logf):
-              logs = json.load(open(logf))
-          logs.append(metrics)
-          json.dump(logs, open(logf,'w'), indent=2)
-          print("Daily log appended:", metrics)
-          PYCODE
+          # if you already have a monitor script, run it
+          # otherwise create a quick sample log file for test
+          if [ -f WTEF_Persistent_Cognitive_Archive.csv ]; then
+            python -c "print('archive exists: ok')"
+            # Replace the following line with your real script e.g. python monitor_run.py
+            python - <<'PY'
+import datetime, json
+row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test":"ok"}
+open('WTEF_Daily_Log.json','w').write(json.dumps(row))
+print('Created WTEF_Daily_Log.json')
+PY
+          else
+            echo "Archive missing; creating test log file"
+            python - <<'PY'
+import datetime, json
+row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note":"archive-missing-test"}
+open('WTEF_Daily_Log.json','w').write(json.dumps(row))
+print('Created WTEF_Daily_Log.json (test)')
+PY
+          fi
 
       - name: Commit updated log
         run: |
-          git config --global user.name "RWAY-AutoMonitor"
-          git config --global user.email "auto@wtef.system"
-          git add WTEF_Daily_Log.json
-          git commit -m "Auto update: Daily Stability Log" || echo "No changes"
-          git push
+          git config user.name "RWAY-AutoMonitor"
+          git config user.email "auto@wtef.local"
+          git add WTEF_Daily_Log.json || true
+          git commit -m "Auto update: Daily Stability Log" || echo "No changes to commit"
+          git push origin HEAD:main

@@ -30,12 +30,13 @@ jobs:
       - name: Run stability verification
         shell: bash
         run: |
-          # Create a small test log using embedded python. This block uses a heredoc.
+          echo "Running stability verification..."
           if [ -f WTEF_Persistent_Cognitive_Archive.csv ]; then
+            echo "Archive found — generating log."
             python - <<'PY'
 import datetime, json
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test":"ok"}
-with open('WTEF_Daily_Log.json','w') as f:
+row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test": "ok"}
+with open('WTEF_Daily_Log.json', 'w') as f:
     f.write(json.dumps(row))
 print('Created WTEF_Daily_Log.json')
 PY
@@ -43,17 +44,23 @@ PY
             echo "Archive missing; creating test log file"
             python - <<'PY'
 import datetime, json
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note":"archive-missing-test"}
-with open('WTEF_Daily_Log.json','w') as f:
+row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note": "archive-missing-test"}
+with open('WTEF_Daily_Log.json', 'w') as f:
     f.write(json.dumps(row))
 print('Created WTEF_Daily_Log.json (test)')
 PY
           fi
 
-      - name: Commit updated log
+      - name: Write monitor version file
+        run: |
+          echo "monitor_version=$(date -u +%Y%m%dT%H%M%SZ)" > WTEF_MONITOR_VERSION.txt
+          cat WTEF_MONITOR_VERSION.txt
+          echo "Version file created ✅"
+
+      - name: Commit updated log and version
         run: |
           git config user.name "RWAY-AutoMonitor"
           git config user.email "allappmi@gmail.com"
-          git add WTEF_Daily_Log.json || true
-          git commit -m "Auto update: Daily Stability Log" || echo "No changes to commit"
+          git add WTEF_Daily_Log.json WTEF_MONITOR_VERSION.txt || true
+          git commit -m "Auto update: Daily Stability Log $(date -u +%Y%m%dT%H%M%SZ)" || echo "No changes to commit"
           git push origin HEAD:main

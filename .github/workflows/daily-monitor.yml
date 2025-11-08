@@ -26,26 +26,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pandas numpy scikit-learn
-      - name: Run stability verification (heredoc)
+            - name: Run stability verification
         shell: bash
         run: |
-          echo "Running stability verification..."
-          if [ -f WTEF_Persistent_Cognitive_Archive.csv ]; then
-            python - <<'PY'
-import datetime, json
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "test": "ok"}
-with open('WTEF_Daily_Log.json','w') as f:
-    f.write(json.dumps(row))
-print('Created WTEF_Daily_Log.json')
-PY
+          echo "Running stability verification (monitor.py)..."
+          # ensure python is available (we set up python earlier in the workflow)
+          if command -v python >/dev/null 2>&1; then
+            python monitor.py
           else
-            python - <<'PY'
-import datetime, json
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note":"archive-missing-test"}
-with open('WTEF_Daily_Log.json','w') as f:
-    f.write(json.dumps(row))
-print('Created WTEF_Daily_Log.json (test)')
-PY
+            echo "Python not found"
+            exit 1
           fi
 
       - name: Write monitor version file

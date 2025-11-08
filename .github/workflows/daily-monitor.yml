@@ -1,23 +1,23 @@
+---
 name: WTEF Daily Stability Monitor
 
-# Allow manual & scheduled runs
 on:
-  schedule:
-    - cron: "0 3 * * *"   # daily at 03:00 UTC (08:30 IST)
   workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"   # Runs daily at 03:00 UTC (08:30 IST)
 
-# Important: allow write so workflow can push changes
 permissions:
   contents: write
 
 jobs:
   stability-check:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: true   # << important for writing back
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,46 +29,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas numpy
 
-      - name: Run stability verification (create small python script and run)
-        shell: bash
+      - name: Run WTEF Monitor
         run: |
-          echo "Running stability verification (monitor.py)..."
+          python monitor.py
 
-          # if you already have the archive CSV in repo, create monitor.py and run it
-          if [ -f WTEF_Persistent_Cognitive_Archive.csv ]; then
-            echo "Archive found — creating monitor.py and running it"
-            cat > monitor.py <<'PY'
-import datetime, json, os
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "status": "ok"}
-with open('WTEF_Daily_Log.json','w') as f:
-    json.dump(row, f)
-print("Created WTEF_Daily_Log.json", row)
-PY
-            python monitor.py
-            rm -f monitor.py
-          else
-            echo "Archive missing — creating small test log with monitor.py"
-            cat > monitor.py <<'PY'
-import datetime, json
-row = {"timestamp_utc": datetime.datetime.utcnow().isoformat(), "note": "archive-missing-test"}
-with open('WTEF_Daily_Log.json','w') as f:
-    json.dump(row, f)
-print("Created WTEF_Daily_Log.json (test)", row)
-PY
-            python monitor.py
-            rm -f monitor.py
-          fi
-
-      - name: Write monitor version file
-        run: |
-          echo "monitor_version=$(date -u +%Y%m%dT%H%M%SZ)" > WTEF_MONITOR_VERSION.txt
-          cat WTEF_MONITOR_VERSION.txt
-
-      - name: Commit updated log and version
+      - name: Commit updated log
         run: |
           git config user.name "RWAY-AutoMonitor"
-          # use your GitHub noreply email here (replace YOUR_GITHUB_ID)
-          git config user.email "YOUR_GITHUB_ID@noreply.github.com"
-          git add WTEF_Daily_Log.json WTEF_MONITOR_VERSION.txt || true
+          git config user.email "RWAY00+auto@users.noreply.github.com"
+          git add WTEF_Daily_Log.json || true
           git commit -m "Auto update: Daily Stability Log" || echo "No changes to commit"
-          git push origin HEAD:main
+          git push origin HEAD:main || echo "No push (likely missing permission token)"

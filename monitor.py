@@ -1,39 +1,30 @@
-# monitor.py
-# Small W-TEF stability monitor helper (test log creator)
-# Writes WTEF_Daily_Log.json with a timestamp and a short test note.
+# ============ Phase-02.1 Auto-Output Integration ============
+import os, json
+from datetime import datetime
 
-import datetime
-import json
-import os
-import sys
+OUT_DIR = "automation/v2/outputs"
+os.makedirs(OUT_DIR, exist_ok=True)
 
-ARCHIVE_CSV = "WTEF_Persistent_Cognitive_Archive.csv"
-OUT_JSON = "WTEF_Daily_Log.json"
+# Output JSON filename with timestamp
+timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+output_file = os.path.join(OUT_DIR, f"monitor_{timestamp}.json")
 
-def make_row(missing=False):
-    if not missing:
-        return {
-            "timestamp_utc": datetime.datetime.utcnow().isoformat(),
-            "status": "ok",
-            "note": "archive-present"
-        }
-    else:
-        return {
-            "timestamp_utc": datetime.datetime.utcnow().isoformat(),
-            "status": "test",
-            "note": "archive-missing-test"
-        }
+# Example monitor summary data (you can replace with real metrics)
+data = {
+    "generated_at": datetime.utcnow().isoformat() + "Z",
+    "summary": "Daily stability snapshot",
+    "metrics": {
+        "cognitive_load": 0.87,
+        "system_state": "stable",
+        "entropy": 0.032
+    }
+}
 
-def main():
-    archive_exists = os.path.exists(ARCHIVE_CSV)
-    row = make_row(missing=not archive_exists)
-    try:
-        with open(OUT_JSON, "w") as f:
-            json.dump(row, f)
-        print(f"Created {OUT_JSON} ->", row)
-    except Exception as e:
-        print("ERROR writing log:", e, file=sys.stderr)
-        sys.exit(2)
+# Save monitor output
+with open(output_file, "w") as f:
+    json.dump(data, f, indent=2)
+print(f"🧩 Monitor output written: {output_file}")
 
-if __name__ == "__main__":
-    main()
+# Trigger auto-upload
+os.system("python automation/v2/monitor_integration.py")
+# ============================================================

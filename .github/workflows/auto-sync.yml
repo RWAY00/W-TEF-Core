@@ -1,4 +1,4 @@
-
+# .github/workflows/auto-sync.yml
 name: WTEF Auto Sync v2
 
 on:
@@ -9,7 +9,7 @@ on:
     - cron: '0 2 * * *'  # daily at 02:00 UTC
 
 permissions:
-  contents: write   # workflow को repo में फाइल update करने की अनुमति
+  contents: write
 
 jobs:
   auto-sync:

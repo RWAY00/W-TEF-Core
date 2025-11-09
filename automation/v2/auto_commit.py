@@ -1,57 +1,57 @@
-# Colab/ Python cell — upload local JSON to your repo via GitHub API
-import os, base64, json, requests, sys, glob
+# auto_commit.py
+import os, base64, json, requests, time, hashlib
 from datetime import datetime
 
-# required: WTEF_PAT must already be set in os.environ
-PAT = os.environ.get("WTEF_PAT")
-if not PAT:
-    raise SystemExit("WTEF_PAT missing in environment. Set it first.")
+GITHUB_OWNER = "RWAY00"
+GITHUB_REPO = "W-TEF-Core"
+API = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents"
+TOKEN = os.getenv("WTEF_PAT")  # put as GitHub secret
 
-OWNER = "RWAY00"
-REPO = "W-TEF-Core"
-BRANCH = "main"   
+headers = {"Authorization": f"token {TOKEN}", "Accept": "application/vnd.github.v3+json"}
 
-API_BASE = f"https://api.github.com/repos/{OWNER}/{REPO}/contents"
+def make_experiment_id():
+    ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    short = hashlib.sha1(ts.encode()).hexdigest()[:6]
+    return f"WTEF-{ts}-{short}"
 
-# find the test file(s) you created
-files = sorted(glob.glob("automation/v2/outputs/test_monitor_*.json"))
-if not files:
-    raise SystemExit("No test_monitor_*.json found in automation/v2/outputs. Create one first.")
+def get_file_sha(path):
+    url = f"{API}/{path}"
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        return r.json().get("sha")
+    return None
 
-fn = files[-1]   # latest
-print("Uploading local file:", fn)
+def upload_file(path, content_bytes, message):
+    sha = get_file_sha(path)
+    payload = {
+        "message": message,
+        "content": base64.b64encode(content_bytes).decode(),
+        "branch": "main"
+    }
+    if sha:
+        payload["sha"] = sha
+    url = f"{API}/{path}"
+    r = requests.put(url, headers=headers, data=json.dumps(payload))
+    r.raise_for_status()
+    return r.json()
 
-with open(fn, "rb") as f:
-    content_bytes = f.read()
+def main():
+    exp_id = make_experiment_id()
+    timestamp = datetime.utcnow().isoformat() + "Z"
 
-remote_path = f"automation/v2/artifacts/{os.path.basename(fn)}"  # where to store in repo
-message = f"Auto-upload test {os.path.basename(fn)}"
-b64 = base64.b64encode(content_bytes).decode()
+    # Example: create a small run log
+    run_log = {
+        "id": exp_id,
+        "timestamp": timestamp,
+        "note": "Auto sync run",
+        "files": ["WTEF_Daily_Log.json"]
+    }
+    path = f"automation/v2/logs/runs/{exp_id}.json"
+    content = json.dumps(run_log, indent=2).encode()
+    res = upload_file(path, content, f"Auto: add run log {exp_id}")
+    print("Uploaded:", res.get("content", {}).get("path"))
 
-# check if file already exists to get sha
-headers = {"Authorization": f"token {PAT}", "Accept": "application/vnd.github.v3+json"}
-get_url = f"{API_BASE}/{remote_path}"
-r = requests.get(get_url, headers=headers)
-payload = {
-    "message": message,
-    "content": b64,
-    "branch": BRANCH
-}
-if r.status_code == 200:
-    sha = r.json().get("sha")
-    payload["sha"] = sha
-    print("Existing file found in repo (will update).")
-elif r.status_code == 404:
-    print("New file (will create).")
-else:
-    print("Warning: GET returned", r.status_code, r.text[:300])
-
-# do the PUT
-put_url = get_url
-resp = requests.put(put_url, headers=headers, data=json.dumps(payload), timeout=30)
-if resp.status_code in (200,201):
-    print("Success! Uploaded to:", resp.json()["content"]["path"])
-    print("Commit:", resp.json()["commit"]["sha"])
-else:
-    print("Upload failed:", resp.status_code)
-    print(resp.text)
+if __name__ == "__main__":
+    if not TOKEN:
+        raise SystemExit("WTEF_PAT environment variable missing.")
+    main()

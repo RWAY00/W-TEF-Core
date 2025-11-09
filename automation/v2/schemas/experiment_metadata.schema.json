@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["id","title","timestamp","author"],
+  "properties": {
+    "id": {"type":"string"},
+    "title": {"type":"string"},
+    "timestamp": {"type":"string","format":"date-time"},
+    "author": {"type":"string"},
+    "tags": {"type":"array","items":{"type":"string"}},
+    "source_files": {"type":"array","items":{"type":"string"}},
+    "commit_sha": {"type":"string"},
+    "notes": {"type":"string"}
+  }
+}

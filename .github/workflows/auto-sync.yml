@@ -1,0 +1,12 @@
+/W-TEF/
+  automation/
+    v2/
+      init_experiment.py
+      auto_commit.py
+      monitor.py         # आपका existing monitor.py को integrate करें
+      timeline_sync.json
+      naming_policy.md
+      schemas/
+        experiment_metadata.schema.json
+      logs/
+        runs/            # persisted run logs (JSON)

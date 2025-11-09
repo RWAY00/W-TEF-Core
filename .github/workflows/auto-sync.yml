@@ -1,12 +1,32 @@
-/W-TEF/
-  automation/
-    v2/
-      init_experiment.py
-      auto_commit.py
-      monitor.py         # आपका existing monitor.py को integrate करें
-      timeline_sync.json
-      naming_policy.md
-      schemas/
-        experiment_metadata.schema.json
-      logs/
-        runs/            # persisted run logs (JSON)
+name: WTEF Auto Sync v2
+on:
+  push:
+    paths:
+      - 'automation/**'
+  schedule:
+    - cron: '0 2 * * *'  # daily at 02:00 UTC
+
+jobs:
+  auto-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run auto commit
+        env:
+          WTEF_PAT: ${{ secrets.WTEF_PAT }}
+        run: |
+          python automation/v2/auto_commit.py

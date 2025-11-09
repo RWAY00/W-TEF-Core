@@ -1,4 +1,5 @@
 name: WTEF Auto Sync v2
+
 on:
   push:
     paths:
@@ -6,9 +7,13 @@ on:
   schedule:
     - cron: '0 2 * * *'  # daily at 02:00 UTC
 
+permissions:
+  contents: write   # workflow को repo में फाइल update करने की अनुमति
+
 jobs:
   auto-sync:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +36,6 @@ jobs:
         run: |
           python automation/v2/auto_commit.py
 
-              - name: Update Cognitive Archive
+      - name: Update Cognitive Archive
         run: |
           python automation/v2/archive_linker.py

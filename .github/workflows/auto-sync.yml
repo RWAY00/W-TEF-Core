@@ -30,6 +30,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install requests
+      - name: Create CI monitor output (heartbeat)
+        run: |
+          python - <<'PY'
+          import os, json, datetime
+          os.makedirs("automation/v2/outputs", exist_ok=True)
+          fname = "automation/v2/outputs/test_monitor_ci.json"
+          data = {
+            "generated_at": datetime.datetime.utcnow().isoformat()+"Z",
+            "summary": "CI heartbeat - auto-sync",
+            "metrics": {}
+          }
+          with open(fname,"w") as f:
+              json.dump(data, f, indent=2)
+          print("Wrote:", fname)
+          PY
 
       - name: Run auto commit
         env:

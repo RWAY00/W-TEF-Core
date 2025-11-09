@@ -36,3 +36,7 @@ jobs:
           WTEF_PAT: ${{ secrets.WTEF_PAT }}
         run: |
           python automation/v2/auto_commit.py
+
+      - name: Update Cognitive Archive
+        run: |
+          python automation/v2/archive_linker.py

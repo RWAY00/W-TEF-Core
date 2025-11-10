@@ -1,4 +1,4 @@
-# .github/workflows/auto-sync.yml  (Suggested - PAT enabled checkout)
+# .github/workflows/auto-sync.yml
 name: WTEF Auto Sync v2
 
 on:
@@ -6,22 +6,20 @@ on:
     paths:
       - 'automation/**'
   schedule:
-    - cron: '0 2 * * *'  # daily at 02:00 UTC (07:30 IST)
-  workflow_dispatch:
+    - cron: '0 2 * * *'  # daily at 02:00 UTC
 
 permissions:
   contents: write
-  workflows: write   # add if you need to trigger other workflows from this run
 
 jobs:
   auto-sync:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.WTEF_PAT }}   # use PAT to allow pushes if your scripts push
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -31,8 +29,7 @@ jobs:
       - name: Install requirements
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || pip install requests
-
+          pip install requests
       - name: Create CI monitor output (heartbeat)
         run: |
           python - <<'PY'
@@ -53,11 +50,9 @@ jobs:
         env:
           WTEF_PAT: ${{ secrets.WTEF_PAT }}
         run: |
-          # Optional: show python version & list files for debugging
-          python --version
-          ls -la automation/v2 || true
           python automation/v2/auto_commit.py
 
       - name: Update Cognitive Archive
         run: |
           python automation/v2/archive_linker.py
+

@@ -1,6 +1,8 @@
 # auto_commit.py
-import os, base64, json, requests, time, hashlib
-from datetime import datetime
+import os
+if os.getenv("DO_COMMIT", "no") != "yes":
+    print("Commit disabled (dry run).")
+    exit(0)
 
 GITHUB_OWNER = "RWAY00"
 GITHUB_REPO = "W-TEF-Core"

@@ -1,6 +1,5 @@
-name: WTEF Auto Sync (Safe)
+name: WTEF Auto Sync (Manual Only)
 
-# Triggers: manual OR scheduled (low frequency)
 on:
   workflow_dispatch:
     inputs:
@@ -8,9 +7,6 @@ on:
         description: 'Allow this run to commit/push changes? (yes / no)'
         required: false
         default: 'no'
-  schedule:
-    - cron: '30 0 * * *'    # once daily at 00:30 UTC (change or comment out if you want twice)
-    - cron: '30 12 * * *'   # twice daily at 12:30 UTC (comment one line to make it once)
 
 concurrency:
   group: wtef-auto-sync
@@ -18,12 +14,10 @@ concurrency:
 
 jobs:
   auto-sync:
-    # Only run on your self-hosted windows runner (adjust labels if needed)
     runs-on: [self-hosted, Windows, X64]
-    if: github.actor != 'github-actions[bot]'    # avoid loops from the actions bot
+    if: github.actor != 'github-actions[bot]'
 
     env:
-      # set to 'yes' to allow script to commit; by default scheduled runs will not commit
       DO_COMMIT: ${{ github.event.inputs.do_commit || 'no' }}
       ARTIFACT_RETENTION_DAYS: 1
 
@@ -60,12 +54,8 @@ jobs:
       shell: pwsh
 
     - name: Run Python automation script (safe mode)
-      # Run via PowerShell so Windows env behaves consistently
       run: |
         Write-Host "Starting Python auto script..."
-        # If you want commit behavior controlled by DO_COMMIT env var,
-        # the script should read this environment variable and honor it.
-        # Example: python automation/v2/auto_commit.py --commit yes
         if ($env:DO_COMMIT -eq 'yes') {
           Write-Host "Commit mode: ENABLED"
           python automation/v2/auto_commit.py --commit yes

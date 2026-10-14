@@ -4,81 +4,62 @@ on:
   workflow_dispatch:
     inputs:
       do_commit:
-        description: 'Allow this run to commit/push changes? (yes / no)'
-        required: false
-        default: 'no'
+        description: "Archive the generated output on a dedicated branch? (yes/no)"
+        required: true
+        type: choice
+        options:
+          - "no"
+          - "yes"
+        default: "no"
 
 concurrency:
   group: wtef-auto-sync
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   auto-sync:
     runs-on: [self-hosted, Windows, X64]
     if: github.actor != 'github-actions[bot]'
-
     env:
-      DO_COMMIT: ${{ github.event.inputs.do_commit || 'no' }}
+      DO_COMMIT: ${{ inputs.do_commit || 'no' }}
+      GITHUB_RUN_ID: ${{ github.run_id }}
       ARTIFACT_RETENTION_DAYS: 1
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
-    - name: Show runner and context (debug)
-      run: |
-        echo "Runner: $RUNNER_NAME"
-        echo "Actor: $GITHUB_ACTOR"
-        echo "Event: $GITHUB_EVENT_NAME"
-      shell: bash
+      - name: Show runner and context
+        shell: pwsh
+        run: |
+          Write-Host "Runner OS: $env:RUNNER_OS"
+          Write-Host "Actor: $env:GITHUB_ACTOR"
+          Write-Host "Event: $env:GITHUB_EVENT_NAME"
+          Write-Host "Commit mode: $env:DO_COMMIT"
 
-    - name: Ensure Python is available (self-hosted)
-      run: |
-        python --version || echo "python not found on runner"
-        pip --version || echo "pip not found on runner"
-      shell: bash
+      - name: Check Python
+        shell: pwsh
+        run: |
+          python --version
+          if ($LASTEXITCODE -ne 0) { throw "Python is required but unavailable." }
 
-    - name: Optional: Unblock PowerShell script & run setup (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        Write-Host "Unblocking possible setup scripts..."
-        $scriptPath = "C:\actions-runner\_work\temp\setup.ps1"
-        if (Test-Path $scriptPath) {
-          Unblock-File -Path $scriptPath
-          Write-Host "Unblocked $scriptPath"
-        } else {
-          Write-Host "No temp setup.ps1 found at $scriptPath"
-        }
-      shell: pwsh
+      - name: Run monitor and archival gate
+        shell: pwsh
+        run: |
+          python monitor.py
+          if ($LASTEXITCODE -ne 0) { throw "Monitor or archival gate failed." }
 
-    - name: Run Python automation script (safe mode)
-      run: |
-        Write-Host "Starting Python auto script..."
-        if ($env:DO_COMMIT -eq 'yes') {
-          Write-Host "Commit mode: ENABLED"
-          python automation/v2/auto_commit.py --commit yes
-        } else {
-          Write-Host "Commit mode: DISABLED (dry-run)"
-          python automation/v2/auto_commit.py --commit no
-        }
-      shell: pwsh
-
-    - name: Collect runner logs (small snapshot)
-      if: always()
-      run: |
-        $out = "runner-log-snapshot.txt"
-        "Run: $env:GITHUB_RUN_NUMBER" | Out-File -FilePath $out -Encoding utf8
-        Get-ChildItem -Path C:\actions-runner\_diag -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 5 | ForEach-Object {
-          "$($_.Name) - $($_.Length) bytes - $($_.LastWriteTime)" | Out-File -FilePath $out -Append -Encoding utf8
-        }
-        Get-Content -Path $out | Write-Host
-      shell: pwsh
-
-    - name: Upload small debug artifact (1 day retention)
-      uses: actions/upload-artifact@v4
-      with:
-        name: wtef-run-snapshot
-        path: runner-log-snapshot.txt
-        retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+      - name: Upload monitor outputs for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wtef-monitor-output
+          path: automation/v2/outputs/*.json
+          if-no-files-found: warn
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}

@@ -1,59 +1,86 @@
-# auto_commit.py
+"""Validate monitor JSON and optionally archive it on a dedicated Git branch.
+
+Dry-run is the default. Commit mode never writes directly to main.
+"""
+import argparse
+import json
 import os
-if os.getenv("DO_COMMIT", "no") != "yes":
-    print("Commit disabled (dry run).")
-    exit(0)
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
 
-GITHUB_OWNER = "RWAY00"
-GITHUB_REPO = "W-TEF-Core"
-API = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents"
-TOKEN = os.getenv("WTEF_PAT")  # put as GitHub secret
+OUTPUT_ROOT = Path("automation/v2/outputs")
 
-headers = {"Authorization": f"token {TOKEN}", "Accept": "application/vnd.github.v3+json"}
 
-def make_experiment_id():
-    ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-    short = hashlib.sha1(ts.encode()).hexdigest()[:6]
-    return f"WTEF-{ts}-{short}"
+def validate_output(path: Path) -> dict:
+    resolved = path.resolve()
+    allowed_root = OUTPUT_ROOT.resolve()
+    if resolved.parent != allowed_root:
+        raise ValueError(f"Output must be directly inside {allowed_root}")
+    if not resolved.is_file() or resolved.stat().st_size == 0:
+        raise ValueError("Output file is missing or empty")
+    with resolved.open("r", encoding="utf-8") as stream:
+        data = json.load(stream)
+    if not isinstance(data, dict):
+        raise ValueError("Output JSON root must be an object")
+    for field in ("generated_at", "summary", "metrics"):
+        if field not in data:
+            raise ValueError(f"Output JSON is missing required field: {field}")
+    if not isinstance(data["metrics"], dict):
+        raise ValueError("Output metrics must be a JSON object")
+    return data
 
-def get_file_sha(path):
-    url = f"{API}/{path}"
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        return r.json().get("sha")
-    return None
 
-def upload_file(path, content_bytes, message):
-    sha = get_file_sha(path)
-    payload = {
-        "message": message,
-        "content": base64.b64encode(content_bytes).decode(),
-        "branch": "main"
-    }
-    if sha:
-        payload["sha"] = sha
-    url = f"{API}/{path}"
-    r = requests.put(url, headers=headers, data=json.dumps(payload))
-    r.raise_for_status()
-    return r.json()
+def run_git(args: list[str]) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return result.stdout.strip()
 
-def main():
-    exp_id = make_experiment_id()
-    timestamp = datetime.utcnow().isoformat() + "Z"
 
-    # Example: create a small run log
-    run_log = {
-        "id": exp_id,
-        "timestamp": timestamp,
-        "note": "Auto sync run",
-        "files": ["WTEF_Daily_Log.json"]
-    }
-    path = f"automation/v2/logs/runs/{exp_id}.json"
-    content = json.dumps(run_log, indent=2).encode()
-    res = upload_file(path, content, f"Auto: add run log {exp_id}")
-    print("Uploaded:", res.get("content", {}).get("path"))
+def archive_output(path: Path) -> None:
+    # Fail closed if this is not a clean Git checkout.
+    if run_git(["diff", "--cached", "--quiet"]) != "":
+        raise RuntimeError("Unexpected staged changes; refusing to archive")
+    run_id = os.getenv("GITHUB_RUN_ID", "")
+    suffix = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    branch = f"automation/monitor-output-{suffix}"
+    run_git(["switch", "-c", branch])
+    run_git(["add", "--", str(path)])
+    run_git(["commit", "-m", f"archive: monitor output {path.name}"])
+    run_git(["push", "--set-upstream", "origin", branch])
+    remote = run_git(["ls-remote", "--heads", "origin", branch])
+    if not remote:
+        raise RuntimeError("Push returned but remote branch could not be verified")
+    print(f"ARCHIVE_VERIFIED: {branch}:{path.as_posix()}")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("output_path", help="Exact JSON output to validate/archive")
+    parser.add_argument("--commit", choices=("yes", "no"), default=os.getenv("DO_COMMIT", "no"))
+    args = parser.parse_args()
+    if args.commit not in ("yes", "no"):
+        print("Invalid commit mode; expected yes or no.", file=sys.stderr)
+        return 2
+    try:
+        path = Path(args.output_path)
+        validate_output(path)
+        print(f"VALIDATION_PASS: {path.as_posix()}")
+        if args.commit == "no":
+            print("DRY_RUN_PASS: no Git writes attempted")
+            return 0
+        archive_output(path)
+        return 0
+    except (OSError, ValueError, json.JSONDecodeError, subprocess.CalledProcessError, RuntimeError) as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return 1
+
 
 if __name__ == "__main__":
-    if not TOKEN:
-        raise SystemExit("WTEF_PAT environment variable missing.")
-    main()
+    raise SystemExit(main())

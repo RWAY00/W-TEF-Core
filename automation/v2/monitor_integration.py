@@ -1,40 +1,27 @@
-#!/usr/bin/env python3
-"""
-monitor_integration.py
-Phase-02.1
-Links monitor outputs to GitHub auto-commit system.
-"""
+"""Validate and hand the current run's exact output to the archival gate."""
+import os
+import subprocess
+import sys
 
-import os, glob, subprocess, json
-from datetime import datetime
+AUTO_COMMIT = os.path.join("automation", "v2", "auto_commit.py")
 
-OUT_DIR = "automation/v2/outputs"
-AUTO_COMMIT = "python automation/v2/auto_commit.py"
 
-def find_latest_output():
-    files = sorted(glob.glob(os.path.join(OUT_DIR, "*.json")),
-                   key=os.path.getmtime, reverse=True)
-    return files[0] if files else None
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("Usage: monitor_integration.py <output-json-path>", file=sys.stderr)
+        return 2
+    output_path = sys.argv[1]
+    mode = os.getenv("DO_COMMIT", "no")
+    if mode not in ("yes", "no"):
+        print("Invalid DO_COMMIT value; expected 'yes' or 'no'.", file=sys.stderr)
+        return 2
+    command = [sys.executable, AUTO_COMMIT, output_path, "--commit", mode]
+    print(f"Archival gate mode: {'COMMIT' if mode == 'yes' else 'DRY-RUN'}")
+    result = subprocess.run(command, check=False)
+    if result.returncode:
+        print(f"Archival gate failed with exit code {result.returncode}", file=sys.stderr)
+    return result.returncode
 
-def main():
-    latest = find_latest_output()
-    if not latest:
-        print("No monitor output found in", OUT_DIR)
-        return
-
-    meta = {
-        "title": "Monitor Output Sync",
-        "notes": "Auto-uploaded from monitor integration",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
-    }
-
-    cmd = f'{AUTO_COMMIT} "{latest}" --meta=\'{json.dumps(meta)}\''
-    print("▶ Running:", cmd)
-    result = subprocess.run(cmd, shell=True)
-    if result.returncode == 0:
-        print("✅ Monitor integration complete.")
-    else:
-        print("❌ Auto-commit failed with code:", result.returncode)
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

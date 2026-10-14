@@ -32,7 +32,7 @@ def validate_output(path: Path) -> dict:
     return data
 
 
-def run_git(args: list[str]) -> str:
+def run_git(args) -> str:
     result = subprocess.run(
         ["git", *args],
         check=True,
